@@ -4,9 +4,9 @@
     <name>elastic-timeout</name>
     <display-name>elastic-timeout</display-name>
     <version>@Version@</version>
-    <description>Plugin description</description>
-    <download-url>Plugin download URL</download-url>
-    <email>Plugin author e-mail</email>
+    <description>A Teamcity timeout plugin which takes the build history into account</description>
+    <download-url>https://github.com/foeser/elastic-timeout/releases</download-url>
+    <email>florian.oeser(at)gmail.com</email>
     <vendor>
       <name>@VendorName@</name>
       <url>@VendorURL@</url>
