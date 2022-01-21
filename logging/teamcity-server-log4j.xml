@@ -1,0 +1,26 @@
+<?xml version='1.0' encoding='ISO-8859-1' ?>
+<!DOCTYPE log4j:configuration SYSTEM "./log4j.dtd">
+<!--
+The file can be modified without application restart, but some changes can still require restart to take effect.
+
+You might also need to increase the number of files to store to prevent logs from quick rotation
+   <param name="maxBackupIndex" value="20"/>
+-->
+<log4j:configuration xmlns:log4j="http://jakarta.apache.org/log4j/">
+  <!-- ... -->
+  <appender name="ELASTIC-TIMEOUT.LOG" class="jetbrains.buildServer.util.TCRollingFileAppender">
+    <param name="file" value="${teamcity_logs}/elastic-timeout-plugin.log"/>
+    <param name="maxBackupIndex" value="1"/>
+    <layout class="org.apache.log4j.PatternLayout">
+      <param name="ConversionPattern" value="[%d] %6p [%30.30t] - %c{1} - %m%n"/>
+    </layout>
+  </appender>
+
+  <category name="com.github.foeser.teamcity.elastictimeout.FinishBuildListener" additivity="false">
+    <priority value="INFO"/>
+    <!-- remove ROLL appender if you don't want to see INFO in ${teamcity_logs}/teamcity-server.log -->
+    <appender-ref ref="ROLL"/>
+    <appender-ref ref="ELASTIC-TIMEOUT.LOG"/>
+  </category>
+  <!-- ... -->
+</log4j:configuration>
