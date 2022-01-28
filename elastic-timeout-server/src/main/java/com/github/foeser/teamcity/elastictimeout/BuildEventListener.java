@@ -4,9 +4,7 @@ import jetbrains.buildServer.serverSide.*;
 import jetbrains.buildServer.util.EventDispatcher;
 import org.apache.log4j.Logger;
 import org.jetbrains.annotations.NotNull;
-
 import java.util.*;
-
 
 public class BuildEventListener extends BuildServerAdapter {
 
@@ -27,7 +25,7 @@ public class BuildEventListener extends BuildServerAdapter {
         }
     }
 
-    // get also called when build get interrupted
+    // This event get also called when build get interrupted
     @Override
     public void beforeBuildFinish(@NotNull SRunningBuild build) {
         SBuildFeatureDescriptor feature = getElasticTimeoutFeature(build);

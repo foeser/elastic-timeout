@@ -26,7 +26,7 @@ public class ElasticTimeoutFailureCondition extends BuildFeature {
     private final String myEditUrl;
 
     public ElasticTimeoutFailureCondition(@NotNull BuildHistory buildHistory, @NotNull final PluginDescriptor descriptor) {
-        myEditUrl = descriptor.getPluginResourcesPath("avgBuildTimeFailureConditionSettings.jsp");
+        myEditUrl = descriptor.getPluginResourcesPath("ElasticTimeoutFailureConditionSettings.jsp");
     }
 
     @Override
@@ -43,7 +43,7 @@ public class ElasticTimeoutFailureCondition extends BuildFeature {
     @NotNull
     @Override
     public String getDisplayName() {
-        return "Fail build if time exceeds avg. time of previous ones";
+        return "Fail build if its execution time exceeds the average time of previous ones (with a given threshold)";
     }
 
     @Nullable

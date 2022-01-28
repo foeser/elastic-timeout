@@ -1,6 +1,7 @@
 <%@ include file="/include-internal.jsp" %>
 
 <l:settingsGroup title="Conditions">
+    Define timeout as a percent or fixed value based of the average build duration of previous builds.
     <tr>
         <th>Builds must be</th>
         <td>
@@ -12,11 +13,11 @@
         <th>How many taking into consideration?</th>
         <td>
             <props:textProperty name="build_count"/>
-            <span class="smallNote">If there are not enough builds in history the condition will be ignored.</span>
+            <span class="smallNote">If there are not enough builds in history the condition will be ignored until there is a suitable amount passed.</span>
         </td>
     </tr>
     <tr>
-        <th>Exceeds by:</th>
+        <th>Threshold (exceeds by):</th>
         <td>
             <props:textProperty name="exceed_value"/>
             <props:selectProperty name="exceed_unit">
@@ -30,9 +31,9 @@
         </td>
     </tr>
     <!--<tr>
-        <th>Stop build:</th>
+        <th>Stop build?</th>
         <td>
-            <props:checkboxProperty name="stop_build" uncheckedValue="false"/>
+            <props:checkboxProperty name="stop_build"/>
             <span class="smallNote">Immediately stop the build if it fails due to the condition.</span>
         </td>
     </tr>-->
