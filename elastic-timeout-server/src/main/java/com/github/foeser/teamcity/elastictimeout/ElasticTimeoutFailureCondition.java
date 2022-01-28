@@ -11,8 +11,8 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 
-public class AvgBuildTimeFailureCondition extends BuildFeature {
-    public static final String TYPE = AvgBuildTimeFailureCondition.class.getName();
+public class ElasticTimeoutFailureCondition extends BuildFeature {
+    public static final String TYPE = ElasticTimeoutFailureCondition.class.getName();
 
     public static final String PARAM_STATUS = "status_radio";
     public static final String PARAM_STATUS_SUCCESSFUL = "Successful";
@@ -21,11 +21,11 @@ public class AvgBuildTimeFailureCondition extends BuildFeature {
     public static final String PARAM_EXCEED_UNIT = "exceed_unit";
     public static final String PARAM_EXCEED_UNIT_PERCENT = "percent";
 
-    private static final Logger LOGGER = Logger.getLogger(AvgBuildTimeFailureCondition.class.getName());
+    private static final Logger LOGGER = Logger.getLogger(ElasticTimeoutFailureCondition.class.getName());
 
     private final String myEditUrl;
 
-    public AvgBuildTimeFailureCondition(@NotNull BuildHistory buildHistory, @NotNull final PluginDescriptor descriptor) {
+    public ElasticTimeoutFailureCondition(@NotNull BuildHistory buildHistory, @NotNull final PluginDescriptor descriptor) {
         myEditUrl = descriptor.getPluginResourcesPath("avgBuildTimeFailureConditionSettings.jsp");
     }
 
@@ -111,26 +111,7 @@ public class AvgBuildTimeFailureCondition extends BuildFeature {
         return map;
     }
 
-    /*public void checkBuild(@NotNull SRunningBuild build, @NotNull SBuildFeatureDescriptor featureDescriptor) {
-        int buildCount = Integer.valueOf(featureDescriptor.getParameters().get(PARAM_BUILD_COUNT));
-        logWarn(build, "status param set to:" + featureDescriptor.getParameters().get(PARAM_STATUS));
-        logWarn(build, "build count set to:" + featureDescriptor.getParameters().get(PARAM_BUILD_COUNT));
-        List<SFinishedBuild> previousBuilds = myBuildHistory.getEntriesBefore(build, featureDescriptor.getParameters().get(PARAM_STATUS) == PARAM_STATUS_SUCCESSFUL);
-        if(previousBuilds.size() < buildCount) {
-            return;
-        } else {
-            logWarn(build, "builds to consider:" + previousBuilds.subList(0, buildCount));
-            // calc avg time
-            long totalTime = previousBuilds.subList(0, buildCount).stream().mapToLong(b -> b.getBuildStatistics(new BuildStatisticsOptions()).getTotalDuration()).sum();
-            if(build.getElapsedTime() > totalTime / buildCount) {
-                logWarn(build, "I'm running to long, please kill me!");
-            }
-        }
-        // goes to system log
-        //LOG.warn(previousBuilds);
-    }
-
-    private void logWarn(@NotNull SRunningBuild build, @NotNull String message) {
+    /*private void logWarn(@NotNull SRunningBuild build, @NotNull String message) {
         build.getBuildLog().message(message, Status.WARNING, new Date(), null, BuildMessage1.DEFAULT_FLOW_ID, Collections.<String>emptyList());
     }*/
 }

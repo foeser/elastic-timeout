@@ -16,7 +16,7 @@ You might also need to increase the number of files to store to prevent logs fro
     </layout>
   </appender>
 
-  <category name="com.github.foeser.teamcity.elastictimeout.FinishBuildListener" additivity="false">
+  <category name="com.github.foeser.teamcity.elastictimeout.BuildEventListener" additivity="false">
     <priority value="INFO"/>
     <!-- remove ROLL appender if you don't want to see INFO in ${teamcity_logs}/teamcity-server.log -->
     <appender-ref ref="ROLL"/>

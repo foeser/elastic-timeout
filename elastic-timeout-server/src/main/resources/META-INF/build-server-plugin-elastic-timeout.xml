@@ -3,6 +3,7 @@
        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
        xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-3.0.xsd"
        default-autowire="constructor">
-    <bean class="com.github.foeser.teamcity.elastictimeout.AvgBuildTimeFailureCondition"/>
-    <bean class="com.github.foeser.teamcity.elastictimeout.FinishBuildListener"/>
+    <bean class="com.github.foeser.teamcity.elastictimeout.ElasticTimeoutFailureCondition"/>
+    <bean class="com.github.foeser.teamcity.elastictimeout.BuildEventListener"/>
+    <bean class="com.github.foeser.teamcity.elastictimeout.BuildTimeoutHandler"/>
 </beans>
