@@ -2,10 +2,20 @@ package com.github.foeser.teamcity.elastictimeout;
 
 import jetbrains.buildServer.BuildProblemData;
 import jetbrains.buildServer.serverSide.*;
+import jetbrains.buildServer.serverSide.auth.Permission;
+import jetbrains.buildServer.serverSide.auth.Permissions;
 import jetbrains.buildServer.serverSide.executors.ExecutorServices;
+import jetbrains.buildServer.serverSide.impl.RunningBuildState;
+import jetbrains.buildServer.users.PropertyKey;
+import jetbrains.buildServer.users.User;
 import org.apache.log4j.Logger;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
+
+import java.util.Collection;
+import java.util.Date;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static jetbrains.buildServer.BuildProblemTypes.TC_EXECUTION_TIMEOUT_TYPE;
@@ -16,7 +26,7 @@ public class BuildTimeoutHandler {
     private static long SCHEDULER_PERIOD_IN_SECONDS = 10;
     private static final Logger LOGGER = Logger.getLogger(BuildEventListener.class.getName());
     // concurrent hashmap is weak consistent but should be okay for our usage (esp. since we don't update values but rather add or remove keys)
-    private ConcurrentHashMap<Long, Long> mapBuildIdMaxBuildDuration;
+    private ConcurrentHashMap<Long, Map.Entry<Long, Boolean>> mapBuildIdMaxBuildDuration;
     private BuildHistory buildHistory;
 
     public BuildTimeoutHandler(@NotNull ExecutorServices executorServices,
@@ -38,7 +48,7 @@ public class BuildTimeoutHandler {
                     ConcurrentHashMap.Entry<Long,Long> entry = iter.next();
                     ....
                 }*/
-                mapBuildIdMaxBuildDuration.forEach((id, maxAllowedBuildDuration) -> {
+                mapBuildIdMaxBuildDuration.forEach((id, buildDescriptor) -> {
                     SRunningBuild build = runningBuildsManager.findRunningBuildById(id);
                     if(build == null) {
                         // due to the weak consistency it can happen that the build has already finished, and we are working on stale/transient data (from the iterator of the map)
@@ -46,14 +56,22 @@ public class BuildTimeoutHandler {
                         return;
                     }
                     long currentBuildDuration = build.getDuration();
+                    long maxAllowedBuildDuration = buildDescriptor.getKey();
+                    Boolean stopBuildOnTimeout = buildDescriptor.getValue();
                     if (currentBuildDuration > maxAllowedBuildDuration) {
-                        // ToDo: adapt to desc of TC native implementation
-                        String buildTimeoutDescription = "Build duration exceed maximum allowed time of " + maxAllowedBuildDuration;
-                        build.addBuildProblem(BuildProblemData.createBuildProblem(String.valueOf(buildTimeoutDescription.hashCode()), TC_EXECUTION_TIMEOUT_TYPE, buildTimeoutDescription));
                         // don't consider this build anymore and remove from map
                         mapBuildIdMaxBuildDuration.remove(id);
-                        // ToDo: stop build depending on the settings
-                        LOGGER.info(String.format("%s is running already %d and exceed maximum allowed time of %d and got annotated with build problem.", build, currentBuildDuration, maxAllowedBuildDuration));
+                        // ToDo: adapt to desc of TC native implementation
+                        String buildTimeoutDescription = "Build duration exceed maximum allowed time of " + maxAllowedBuildDuration;
+                        if(stopBuildOnTimeout) {
+                            build.stop(new DummyUser(), buildTimeoutDescription);
+                            //build.setInterrupted(RunningBuildState.INTERRUPTED_BY_SYSTEM, null, buildTimeoutDescription);
+                            build.addBuildProblem(BuildProblemData.createBuildProblem(String.valueOf(buildTimeoutDescription.hashCode()), TC_EXECUTION_TIMEOUT_TYPE, buildTimeoutDescription));
+                            LOGGER.info(String.format("%s is running already %d and exceed maximum allowed time of %d and got stopped.", build, currentBuildDuration, maxAllowedBuildDuration));
+                        } else {
+                            build.addBuildProblem(BuildProblemData.createBuildProblem(String.valueOf(buildTimeoutDescription.hashCode()), TC_EXECUTION_TIMEOUT_TYPE, buildTimeoutDescription));
+                            LOGGER.info(String.format("%s is running already %d and exceed maximum allowed time of %d and got annotated with build problem.", build, currentBuildDuration, maxAllowedBuildDuration));
+                        }
                     } else {
                         LOGGER.debug(String.format("Checked build %s which is currently running for %d seconds and will exceed once reaching %d.", build, currentBuildDuration, maxAllowedBuildDuration));
                     }
@@ -103,8 +121,9 @@ public class BuildTimeoutHandler {
             } else {
                 maxRunTime += exceedValue;
             }
+            boolean stopBuildOnTimeout = elasticTimeoutFailureCondition.getParameters().get(ElasticTimeoutFailureCondition.PARAM_STOP_BUILD).equals("true");
             // put() is enough since we can't have the same build id twice per definition (compared to using putIfAbsent())
-            mapBuildIdMaxBuildDuration.put(build.getBuildId(), maxRunTime);
+            mapBuildIdMaxBuildDuration.put(build.getBuildId(), Map.entry(maxRunTime, stopBuildOnTimeout));
             LOGGER.info(String.format("Start checking %s build duration which should not take longer then %d seconds.", build, maxRunTime));
         }
     }

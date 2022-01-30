@@ -24,17 +24,17 @@
                 <props:option value="seconds">
                     <c:out value="seconds"/>
                 </props:option>
-                <props:option value="percent" selected="true">
+                <props:option value="percent">
                     <c:out value="percent"/>
                 </props:option>
             </props:selectProperty>
         </td>
     </tr>
-    <!--<tr>
+    <tr>
         <th>Stop build?</th>
         <td>
-            <props:checkboxProperty name="stop_build"/>
+            <props:checkboxProperty name="stop_build" uncheckedValue="false"/>
             <span class="smallNote">Immediately stop the build if it fails due to the condition.</span>
         </td>
-    </tr>-->
+    </tr>
 </l:settingsGroup>
