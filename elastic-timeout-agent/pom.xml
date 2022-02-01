@@ -6,10 +6,10 @@
     <groupId>com.github.foeser.teamcity.elastic-timeout</groupId>
     <version>1.0-SNAPSHOT</version>
   </parent>
-  <artifactId>elastic-timeout-server</artifactId>
+  <artifactId>elastic-timeout-agent</artifactId>
   <packaging>jar</packaging>
   <dependencies>
-
+    
     <dependency>
       <groupId>com.github.foeser.teamcity.elastic-timeout</groupId>
       <artifactId>elastic-timeout-common</artifactId>
@@ -19,16 +19,8 @@
 
     <dependency>
       <groupId>org.jetbrains.teamcity</groupId>
-      <artifactId>server-api</artifactId>
+      <artifactId>agent-api</artifactId>
       <version>${teamcity-version}</version>
-      <scope>provided</scope>
-    </dependency>
-
-    <dependency>
-      <groupId>org.jetbrains.teamcity</groupId>
-      <artifactId>server-web-api</artifactId>
-      <version>${teamcity-version}</version>
-      <type>war</type>
       <scope>provided</scope>
     </dependency>
 
@@ -38,6 +30,7 @@
       <version>${teamcity-version}</version>
       <scope>test</scope>
     </dependency>
+
   </dependencies>
 
   <build>
@@ -45,10 +38,9 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-compiler-plugin</artifactId>
-        <version>3.1</version>
         <configuration>
-          <source>9</source>
-          <target>9</target>
+          <source>1.6</source>
+          <target>1.6</target>
         </configuration>
       </plugin>
     </plugins>

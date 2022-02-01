@@ -46,6 +46,8 @@
   </build>
   <modules>
     <module>elastic-timeout-server</module>
+      <module>elastic-timeout-agent</module>
+      <module>elastic-timeout-common</module>
     <module>build</module>
   </modules>
 </project>

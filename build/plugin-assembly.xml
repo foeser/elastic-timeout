@@ -16,6 +16,7 @@
        <useAllReactorProjects>true</useAllReactorProjects>
        <includes>
            <include>com.github.foeser.teamcity.elastic-timeout:elastic-timeout-server</include>
+           <include>com.github.foeser.teamcity.elastic-timeout:elastic-timeout-common</include>
        </includes> 
        <binaries>
            <outputDirectory>server</outputDirectory>
