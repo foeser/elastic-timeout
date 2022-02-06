@@ -8,6 +8,9 @@
   </parent>
   <artifactId>elastic-timeout-server</artifactId>
   <packaging>jar</packaging>
+  <properties>
+    <junit.version>4.11</junit.version>
+  </properties>
   <dependencies>
 
     <dependency>
@@ -29,6 +32,13 @@
       <groupId>org.jetbrains.teamcity</groupId>
       <artifactId>tests-support</artifactId>
       <version>${teamcity-version}</version>
+      <scope>test</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>junit</groupId>
+      <artifactId>junit</artifactId>
+      <version>${junit.version}</version>
       <scope>test</scope>
     </dependency>
   </dependencies>
