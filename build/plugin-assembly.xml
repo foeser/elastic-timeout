@@ -9,7 +9,11 @@
      <file>
          <source>target/teamcity-plugin.xml</source>
          <outputDirectory>/</outputDirectory>
-     </file> 
+     </file>
+      <file>
+          <source>target/elastic-timeout-agent.zip</source>
+          <outputDirectory>agent</outputDirectory>
+      </file>
   </files>
   <moduleSets>
     <moduleSet>

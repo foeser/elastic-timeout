@@ -13,7 +13,8 @@ import org.jetbrains.annotations.Nullable;
 import java.util.*;
 
 public class ElasticTimeoutFailureCondition extends BuildFeature {
-    public static final String TYPE = ElasticTimeoutFailureCondition.class.getName();
+    //public static final String TYPE = ElasticTimeoutFailureCondition.class.getName();
+    public static final String TYPE = "com.github.foeser.teamcity.elastictimeout.ElasticTimeoutFailureCondition";
 
     public static final String PARAM_STATUS = "status_radio";
     public static final String PARAM_STATUS_SUCCESSFUL = "Successful";
@@ -63,7 +64,7 @@ public class ElasticTimeoutFailureCondition extends BuildFeature {
 
     @Override
     public boolean isRequiresAgent() {
-        return false;
+        return true;
     }
 
     @NotNull

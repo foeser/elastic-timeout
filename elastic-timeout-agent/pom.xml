@@ -26,10 +26,35 @@
 
     <dependency>
       <groupId>org.jetbrains.teamcity</groupId>
+      <artifactId>server-api</artifactId>
+      <version>${teamcity-version}</version>
+      <scope>provided</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>org.jetbrains.teamcity</groupId>
       <artifactId>tests-support</artifactId>
       <version>${teamcity-version}</version>
       <scope>test</scope>
     </dependency>
+    <dependency>
+      <groupId>com.github.foeser.teamcity.elastic-timeout</groupId>
+      <artifactId>elastic-timeout-server</artifactId>
+      <version>1.0-SNAPSHOT</version>
+      <scope>compile</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.jetbrains.teamcity</groupId>
+      <artifactId>server-api</artifactId>
+      <version>2021.2</version>
+      <scope>compile</scope>
+    </dependency>
+      <dependency>
+          <groupId>org.jetbrains.teamcity</groupId>
+          <artifactId>server-api</artifactId>
+          <version>2021.2</version>
+          <scope>compile</scope>
+      </dependency>
 
   </dependencies>
 
@@ -39,8 +64,8 @@
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-compiler-plugin</artifactId>
         <configuration>
-          <source>1.6</source>
-          <target>1.6</target>
+          <source>8</source>
+          <target>8</target>
         </configuration>
       </plugin>
     </plugins>
