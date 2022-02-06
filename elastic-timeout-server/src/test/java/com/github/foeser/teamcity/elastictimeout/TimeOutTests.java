@@ -1,9 +1,16 @@
 package com.github.foeser.teamcity.elastictimeout;
 
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.Logger;
+import ch.qos.logback.classic.LoggerContext;
+import com.github.foeser.teamcity.elastictimeout.utils.MemoryAppender;
+import org.slf4j.LoggerFactory;
+
 import jetbrains.buildServer.BaseTestCase;
 import jetbrains.buildServer.serverSide.*;
 import jetbrains.buildServer.serverSide.executors.ExecutorServices;
 import jetbrains.buildServer.util.EventDispatcher;
+
 import org.jmock.Mockery;
 import org.jmock.Expectations;
 import org.testng.annotations.BeforeMethod;
@@ -25,6 +32,7 @@ public class TimeOutTests extends BaseTestCase {
     private SFinishedBuild build3;
     private SFinishedBuild build2;
     private SFinishedBuild build1;
+    MemoryAppender memoryAppender;
 
     @BeforeMethod
     @Override
@@ -53,18 +61,31 @@ public class TimeOutTests extends BaseTestCase {
             }});
         buildTimeoutHandler = new BuildTimeoutHandler(executorServices, runningBuildsManager, buildHistory);
         buildEventListener = new BuildEventListener(eventDispatcher, buildTimeoutHandler);
+
+        // Todo: Test if actually logging on Teamcity works (maybe switch to AppenderSkeleton then: https://stackoverflow.com/a/1828268/1072693)
+        // in order to just get simple logs printed to console we can set the log Level to DEBUG (as the root level set in log4j.xml get set later back to WARN, see debug output)
+        // also logback (at least context) would need to be removed and assuming using org.apache.log4j and not org.slf4j
+        //org.apache.log4j.Logger.getLogger(BuildEventListener.class).setLevel(org.apache.log4j.Level.DEBUG);
+
+        memoryAppender = new MemoryAppender();
+        memoryAppender.setContext((LoggerContext) LoggerFactory.getILoggerFactory());
+        Logger logger = (Logger) LoggerFactory.getLogger(BuildEventListener.class);
+        logger.setLevel(Level.DEBUG);
+        logger.addAppender(memoryAppender);
+        memoryAppender.start();
     }
 
     @Test
     public void addBuildWithoutBuildFeature() {
-       final SRunningBuild mockSRunningBuild = context.mock(SRunningBuild.class);
-       context.checking(new Expectations() {
+        final SRunningBuild mockSRunningBuild = context.mock(SRunningBuild.class);
+        context.checking(new Expectations() {
            {
                // let's return an empty array
                oneOf(mockSRunningBuild).getBuildFeaturesOfType(ElasticTimeoutFailureCondition.TYPE); will (returnValue( new ArrayList<SBuildFeatureDescriptor>()));
            }});
-       buildEventListener.buildStarted(mockSRunningBuild);
-       assertTrue(buildTimeoutHandler.getCurrentBuildsConsidered() == 0);
+        buildEventListener.buildStarted(mockSRunningBuild);
+        assertEquals(0, buildTimeoutHandler.getCurrentBuildsConsidered());
+        assertEquals(1, memoryAppender.search(String.format("%s [%s]", "Either none or more then one enabled AvgBuildTimeFailureCondition feature (failure condition) in that build", mockSRunningBuild)).size());
     }
     @Test
     public void removeBuild() {
