@@ -2,18 +2,11 @@ package com.github.foeser.teamcity.elastictimeout;
 
 import jetbrains.buildServer.BuildProblemData;
 import jetbrains.buildServer.serverSide.*;
-import jetbrains.buildServer.serverSide.auth.Permission;
-import jetbrains.buildServer.serverSide.auth.Permissions;
 import jetbrains.buildServer.serverSide.executors.ExecutorServices;
-import jetbrains.buildServer.serverSide.impl.RunningBuildState;
-import jetbrains.buildServer.users.PropertyKey;
-import jetbrains.buildServer.users.User;
+
 import org.apache.log4j.Logger;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
-import java.util.Collection;
-import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -96,8 +89,9 @@ public class BuildTimeoutHandler {
     }
 
     private void addBuild(SRunningBuild build, SBuildFeatureDescriptor elasticTimeoutFailureCondition) {
-        int numPreviousBuildsToConsider = Integer.parseInt(elasticTimeoutFailureCondition.getParameters().get(ElasticTimeoutFailureCondition.PARAM_BUILD_COUNT));
-        boolean successfulBuildsOnly = elasticTimeoutFailureCondition.getParameters().get(ElasticTimeoutFailureCondition.PARAM_STATUS).equals(ElasticTimeoutFailureCondition.PARAM_STATUS_SUCCESSFUL);
+        Map<String, String> timeoutParameters = elasticTimeoutFailureCondition.getParameters();
+        int numPreviousBuildsToConsider = Integer.parseInt(timeoutParameters.get(ElasticTimeoutFailureCondition.PARAM_BUILD_COUNT));
+        boolean successfulBuildsOnly = timeoutParameters.get(ElasticTimeoutFailureCondition.PARAM_STATUS).equals(ElasticTimeoutFailureCondition.PARAM_STATUS_SUCCESSFUL);
         // get previous builds based on the condition settings
         List<SFinishedBuild> previousBuilds = buildHistory.getEntriesBefore(build, successfulBuildsOnly);
         if(previousBuilds.size() <= numPreviousBuildsToConsider) {
@@ -108,9 +102,9 @@ public class BuildTimeoutHandler {
             List<SFinishedBuild> buildsToConsider = previousBuilds.subList(0, numPreviousBuildsToConsider);
             LOGGER.debug(String.format("Calculating time out times for %s based on those previous builds: %s", build, buildsToConsider));
             // get the total time of all relevant previous builds
-            int exceedValue = Integer.parseInt(elasticTimeoutFailureCondition.getParameters().get(ElasticTimeoutFailureCondition.PARAM_EXCEED_VALUE));
-            boolean usePercentage = elasticTimeoutFailureCondition.getParameters().get(ElasticTimeoutFailureCondition.PARAM_EXCEED_UNIT).equals(ElasticTimeoutFailureCondition.PARAM_EXCEED_UNIT_PERCENT);
-            LOGGER.debug(String.format("Used exceed value: %d (%s)", exceedValue, elasticTimeoutFailureCondition.getParameters().get(ElasticTimeoutFailureCondition.PARAM_EXCEED_UNIT)));
+            int exceedValue = Integer.parseInt(timeoutParameters.get(ElasticTimeoutFailureCondition.PARAM_EXCEED_VALUE));
+            boolean usePercentage = timeoutParameters.get(ElasticTimeoutFailureCondition.PARAM_EXCEED_UNIT).equals(ElasticTimeoutFailureCondition.PARAM_EXCEED_UNIT_PERCENT);
+            LOGGER.debug(String.format("Used exceed value: %d (%s)", exceedValue, timeoutParameters.get(ElasticTimeoutFailureCondition.PARAM_EXCEED_UNIT)));
             long totalTime = buildsToConsider.stream().mapToLong(b -> b.getDuration()).sum();
             long avgBuildTime = totalTime / numPreviousBuildsToConsider;
             LOGGER.debug(String.format("Avg. build time of all considered builds: %d", avgBuildTime));
@@ -121,7 +115,7 @@ public class BuildTimeoutHandler {
             } else {
                 maxRunTime += exceedValue;
             }
-            boolean stopBuildOnTimeout = elasticTimeoutFailureCondition.getParameters().get(ElasticTimeoutFailureCondition.PARAM_STOP_BUILD).equals("true");
+            boolean stopBuildOnTimeout = timeoutParameters.get(ElasticTimeoutFailureCondition.PARAM_STOP_BUILD).equals("true");
             // put() is enough since we can't have the same build id twice per definition (compared to using putIfAbsent())
             mapBuildIdMaxBuildDuration.put(build.getBuildId(), Map.entry(maxRunTime, stopBuildOnTimeout));
             LOGGER.info(String.format("Start checking %s build duration which should not take longer then %d seconds.", build, maxRunTime));

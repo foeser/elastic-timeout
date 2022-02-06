@@ -19,7 +19,7 @@ public class BuildEventListener extends BuildServerAdapter {
 
     @Override
     public void buildStarted(@NotNull SRunningBuild build) {
-        SBuildFeatureDescriptor feature = getElasticTimeoutFeature(build);
+        SBuildFeatureDescriptor feature = getFeature(build);
         if (feature != null) {
             buildTimeoutHandler.handleBuild(build, feature, BuildStatus.STARTED);
         }
@@ -28,13 +28,13 @@ public class BuildEventListener extends BuildServerAdapter {
     // This event get also called when build get interrupted
     @Override
     public void beforeBuildFinish(@NotNull SRunningBuild build) {
-        SBuildFeatureDescriptor feature = getElasticTimeoutFeature(build);
+        SBuildFeatureDescriptor feature = getFeature(build);
         if (feature != null) {
             buildTimeoutHandler.handleBuild(build, feature, BuildStatus.FINISHING);
         }
     }
 
-    private SBuildFeatureDescriptor getElasticTimeoutFeature(SRunningBuild build) {
+    /*private SBuildFeatureDescriptor getElasticTimeoutFeature(SRunningBuild build) {
         SBuildType buildType = build.getBuildType();
         if (buildType == null) {
             return null;
@@ -47,7 +47,7 @@ public class BuildEventListener extends BuildServerAdapter {
         }
 
         return null;
-    }
+    }*/
 
     private SBuildFeatureDescriptor getFeature(SRunningBuild build) {
         // ToDo: test that SBuilds getBuildFeaturesOfType() returns really just enabled ones (compared to the method from BuildTypeSettings)
