@@ -4,6 +4,7 @@ import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.LoggerContext;
 import com.github.foeser.teamcity.elastictimeout.utils.MemoryAppender;
+import jetbrains.buildServer.messages.Status;
 import org.slf4j.LoggerFactory;
 
 import jetbrains.buildServer.BaseTestCase;
@@ -16,22 +17,18 @@ import org.jmock.Expectations;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
-import java.util.ArrayList;
-import java.util.Collections;
+import java.util.*;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 
-public class TimeOutTests extends BaseTestCase {
-    //private SRunningBuild sRunningBuild;
-    private SBuild sBuild;
+// https://github.com/jmock-developers/jmock-library/blob/master/jmock/src/test/java/org/jmock/test/unit/lib/concurrent/DeterministicSchedulerTests.java#L177
+
+public class ElasticTimeOutPluginTests extends BaseTestCase {
     private Mockery context;
     private BuildEventListener buildEventListener;
     private BuildTimeoutHandler buildTimeoutHandler;
     private SBuildFeatureDescriptor mockSBuildFeatureDescriptor;
-
-    private SFinishedBuild build3;
-    private SFinishedBuild build2;
-    private SFinishedBuild build1;
+    private BuildHistory buildHistory;
     MemoryAppender memoryAppender;
 
     @BeforeMethod
@@ -42,23 +39,15 @@ public class TimeOutTests extends BaseTestCase {
         final EventDispatcher<BuildServerListener> eventDispatcher = EventDispatcher.create(BuildServerListener.class);
         final ExecutorServices executorServices = context.mock(ExecutorServices.class);
         final RunningBuildsManager runningBuildsManager = context.mock(RunningBuildsManager.class);
-        final BuildHistory buildHistory = context.mock(BuildHistory.class);
-        //sRunningBuild = context.mock(SRunningBuild.class);
-        sBuild = context.mock(SBuild.class);
+        buildHistory = context.mock(BuildHistory.class);
         mockSBuildFeatureDescriptor = context.mock(SBuildFeatureDescriptor.class);
-        build1 = context.mock(SFinishedBuild.class, "Build1");
-        build2 = context.mock(SFinishedBuild.class, "Build2");
-        build3 = context.mock(SFinishedBuild.class, "Build3");
 
         context.checking(new Expectations() {
             {
-                allowing(mockSBuildFeatureDescriptor).getType(); will (returnValue(ElasticTimeoutFailureCondition.TYPE));
-                //allowing(sRunningBuild).getBuildFeaturesOfType(ElasticTimeoutFailureCondition.TYPE); will (returnValue(Collections.singleton(mockSBuildFeatureDescriptor)));
-                allowing(mockSBuildFeatureDescriptor).getParameters(); will (returnValue(Collections.singletonMap(ElasticTimeoutFailureCondition.PARAM_BUILD_COUNT, "99")));
                 ScheduledExecutorService ses = new ScheduledThreadPoolExecutor(1);
                 allowing(executorServices).getNormalExecutorService(); will(returnValue(ses));
-                //allowing(buildHistory.getEntriesBefore(sBuild, true)); will (returnValue(Arrays.asList(build1, build2, build3)));
             }});
+
         buildTimeoutHandler = new BuildTimeoutHandler(executorServices, runningBuildsManager, buildHistory);
         buildEventListener = new BuildEventListener(eventDispatcher, buildTimeoutHandler);
 
@@ -90,6 +79,27 @@ public class TimeOutTests extends BaseTestCase {
     @Test
     public void removeBuild() {
         // add build, remove it earlier
+        final SRunningBuild mockSRunningBuild = context.mock(SRunningBuild.class);
+        final Map<String, String> elasticTimeoutFailureConditionParameters = Map.ofEntries(
+                new AbstractMap.SimpleEntry(ElasticTimeoutFailureCondition.PARAM_BUILD_COUNT, "3"),
+                new AbstractMap.SimpleEntry(ElasticTimeoutFailureCondition.PARAM_STATUS, "Successful")
+        );
+        final SFinishedBuild build = context.mock(SFinishedBuild.class);;
+
+        context.checking(new Expectations() {
+            {
+                oneOf(mockSRunningBuild).getBuildFeaturesOfType(ElasticTimeoutFailureCondition.TYPE); will (returnValue(Collections.singleton(mockSBuildFeatureDescriptor)));
+                oneOf(mockSBuildFeatureDescriptor).getParameters(); will (returnValue(elasticTimeoutFailureConditionParameters));
+                oneOf(buildHistory.getEntriesBefore(mockSRunningBuild, true)); will (returnValue(Arrays.asList(build, build, build)));
+                //atLeast(3).of (build).getBuildStatus(); will(returnValue(Status.NORMAL));
+                atLeast(3).of (build).getDuration();
+                will(onConsecutiveCalls(
+                        returnValue(10),
+                        returnValue(20),
+                        returnValue(30)));
+            }});
+        buildEventListener.buildStarted(mockSRunningBuild);
+        assertEquals(0, buildTimeoutHandler.getCurrentBuildsConsidered());
     }
     @Test
     void addBuildWithoutHistory() {
@@ -110,5 +120,17 @@ public class TimeOutTests extends BaseTestCase {
     @Test
     void testFixedValueCalculation() {
         // add build and test timeout based on fixed values calculations
+    }
+    @Test
+    void testUserInput() {
+        // add build with missconfigured feature
+    }
+    @Test
+    void successfulOnly() {
+        // add build and test scenario with succesful and all builds
+    }
+    @Test
+    void testVCSTimes() {
+        // add build and test if build duration includes VCS or artifact operations
     }
 }

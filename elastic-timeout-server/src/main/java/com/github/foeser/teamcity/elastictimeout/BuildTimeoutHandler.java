@@ -49,6 +49,8 @@ public class BuildTimeoutHandler {
                         return;
                     }
                     long currentBuildDuration = build.getDuration();
+                    // Todo: check net buildtime which should not include sync times (potentially check SBuild.html#getStatisticValues() and SRunningBuild.html#getCurrentPath() to check if stil syncing)
+                    //long currentBuildDuration = build.getElapsedTime();
                     long maxAllowedBuildDuration = buildDescriptor.getKey();
                     Boolean stopBuildOnTimeout = buildDescriptor.getValue();
                     if (currentBuildDuration > maxAllowedBuildDuration) {
