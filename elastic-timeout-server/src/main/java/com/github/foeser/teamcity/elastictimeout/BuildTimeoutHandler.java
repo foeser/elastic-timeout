@@ -4,8 +4,9 @@ import jetbrains.buildServer.BuildProblemData;
 import jetbrains.buildServer.serverSide.*;
 import jetbrains.buildServer.serverSide.executors.ExecutorServices;
 
-import org.apache.log4j.Logger;
 import org.jetbrains.annotations.NotNull;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.List;
 import java.util.Map;
@@ -17,7 +18,7 @@ public class BuildTimeoutHandler {
 
     private static final long SCHEDULER_INITIAL_DELAY_IN_SECONDS = 10;
     private static long SCHEDULER_PERIOD_IN_SECONDS = 10;
-    private static final Logger LOGGER = Logger.getLogger(BuildEventListener.class.getName());
+    private static final Logger LOGGER = LoggerFactory.getLogger(BuildEventListener.class);
     // concurrent hashmap is weak consistent but should be okay for our usage (esp. since we don't update values but rather add or remove keys)
     private ConcurrentHashMap<Long, Map.Entry<Long, Boolean>> mapBuildIdMaxBuildDuration;
     private BuildHistory buildHistory;
@@ -96,7 +97,7 @@ public class BuildTimeoutHandler {
         boolean successfulBuildsOnly = timeoutParameters.get(ElasticTimeoutFailureCondition.PARAM_STATUS).equals(ElasticTimeoutFailureCondition.PARAM_STATUS_SUCCESSFUL);
         // get previous builds based on the condition settings
         List<SFinishedBuild> previousBuilds = buildHistory.getEntriesBefore(build, successfulBuildsOnly);
-        if(previousBuilds.size() <= numPreviousBuildsToConsider) {
+        if(previousBuilds.size() < numPreviousBuildsToConsider) {
             // in case we don't have enough builds we simply don't care
             LOGGER.debug(String.format("[%s] has elastic timout enabled but doesn't have enough builds in history to consider (%d/%d). Skipping...", build, previousBuilds.size(), numPreviousBuildsToConsider));
             return;
