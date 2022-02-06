@@ -129,4 +129,8 @@ public class BuildTimeoutHandler {
             LOGGER.debug(String.format("%s was removed earlier already from consideration due to timeout.", build));
         }
     }
+
+    public int getCurrentBuildsConsidered() {
+        return mapBuildIdMaxBuildDuration.size();
+    }
 }
