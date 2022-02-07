@@ -4,7 +4,6 @@ import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.LoggerContext;
 import com.github.foeser.teamcity.elastictimeout.utils.MemoryAppender;
-import jetbrains.buildServer.messages.Status;
 import org.slf4j.LoggerFactory;
 
 import jetbrains.buildServer.BaseTestCase;
@@ -46,8 +45,8 @@ public class ElasticTimeOutPluginTests extends BaseTestCase {
             {
                 ScheduledExecutorService ses = new ScheduledThreadPoolExecutor(1);
                 allowing(executorServices).getNormalExecutorService(); will(returnValue(ses));
-            }});
-
+            }
+        });
         buildTimeoutHandler = new BuildTimeoutHandler(executorServices, runningBuildsManager, buildHistory);
         buildEventListener = new BuildEventListener(eventDispatcher, buildTimeoutHandler);
 
@@ -71,35 +70,44 @@ public class ElasticTimeOutPluginTests extends BaseTestCase {
            {
                // let's return an empty array
                oneOf(mockSRunningBuild).getBuildFeaturesOfType(ElasticTimeoutFailureCondition.TYPE); will (returnValue( new ArrayList<SBuildFeatureDescriptor>()));
-           }});
+           }
+        });
         buildEventListener.buildStarted(mockSRunningBuild);
         assertEquals(0, buildTimeoutHandler.getCurrentBuildsConsidered());
         assertEquals(1, memoryAppender.search(String.format("%s [%s]", "Either none or more then one enabled AvgBuildTimeFailureCondition feature (failure condition) in that build", mockSRunningBuild)).size());
     }
     @Test
     public void removeBuild() {
-        // add build, remove it earlier
         final SRunningBuild mockSRunningBuild = context.mock(SRunningBuild.class);
+        // Todo: get the default params from the actual class/object
         final Map<String, String> elasticTimeoutFailureConditionParameters = Map.ofEntries(
                 new AbstractMap.SimpleEntry(ElasticTimeoutFailureCondition.PARAM_BUILD_COUNT, "3"),
-                new AbstractMap.SimpleEntry(ElasticTimeoutFailureCondition.PARAM_STATUS, "Successful")
+                new AbstractMap.SimpleEntry(ElasticTimeoutFailureCondition.PARAM_STATUS, "Successful"),
+                new AbstractMap.SimpleEntry(ElasticTimeoutFailureCondition.PARAM_EXCEED_VALUE, "25"),
+                new AbstractMap.SimpleEntry(ElasticTimeoutFailureCondition.PARAM_EXCEED_UNIT, "seconds"),
+                new AbstractMap.SimpleEntry(ElasticTimeoutFailureCondition.PARAM_STOP_BUILD, "true")
         );
-        final SFinishedBuild build = context.mock(SFinishedBuild.class);;
+        final SFinishedBuild build = context.mock(SFinishedBuild.class);
 
         context.checking(new Expectations() {
             {
-                oneOf(mockSRunningBuild).getBuildFeaturesOfType(ElasticTimeoutFailureCondition.TYPE); will (returnValue(Collections.singleton(mockSBuildFeatureDescriptor)));
+                atLeast(2).of(mockSRunningBuild).getBuildFeaturesOfType(ElasticTimeoutFailureCondition.TYPE); will (returnValue(Collections.singleton(mockSBuildFeatureDescriptor)));
                 oneOf(mockSBuildFeatureDescriptor).getParameters(); will (returnValue(elasticTimeoutFailureConditionParameters));
-                oneOf(buildHistory.getEntriesBefore(mockSRunningBuild, true)); will (returnValue(Arrays.asList(build, build, build)));
+                oneOf(buildHistory).getEntriesBefore(mockSRunningBuild, true); will (returnValue(Arrays.asList(build, build, build, build)));
                 //atLeast(3).of (build).getBuildStatus(); will(returnValue(Status.NORMAL));
-                atLeast(3).of (build).getDuration();
+                atLeast(4).of (build).getDuration();
                 will(onConsecutiveCalls(
-                        returnValue(10),
-                        returnValue(20),
-                        returnValue(30)));
-            }});
+                        returnValue(10L),
+                        returnValue(20L),
+                        returnValue(30L)));
+                atLeast(2).of(mockSRunningBuild).getBuildId(); will (returnValue(1L));
+            }
+        });
         buildEventListener.buildStarted(mockSRunningBuild);
+        assertEquals(1, buildTimeoutHandler.getCurrentBuildsConsidered());
+        buildEventListener.beforeBuildFinish(mockSRunningBuild);
         assertEquals(0, buildTimeoutHandler.getCurrentBuildsConsidered());
+
     }
     @Test
     void addBuildWithoutHistory() {

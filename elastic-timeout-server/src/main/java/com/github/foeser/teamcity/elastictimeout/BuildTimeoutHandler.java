@@ -22,14 +22,20 @@ public class BuildTimeoutHandler {
     // concurrent hashmap is weak consistent but should be okay for our usage (esp. since we don't update values but rather add or remove keys)
     private ConcurrentHashMap<Long, Map.Entry<Long, Boolean>> mapBuildIdMaxBuildDuration;
     private BuildHistory buildHistory;
+    private RunningBuildsManager runningBuildsManager;
 
     public BuildTimeoutHandler(@NotNull ExecutorServices executorServices,
                                @NotNull RunningBuildsManager runningBuildsManager,
                                @NotNull BuildHistory buildHistory) {
         mapBuildIdMaxBuildDuration = new ConcurrentHashMap();
         this.buildHistory = buildHistory;
+        this.runningBuildsManager = runningBuildsManager;
 
-        executorServices.getNormalExecutorService().scheduleAtFixedRate(() -> {
+        executorServices.getNormalExecutorService().scheduleAtFixedRate(checkBuildTimes(), SCHEDULER_INITIAL_DELAY_IN_SECONDS, SCHEDULER_PERIOD_IN_SECONDS, SECONDS);
+    }
+
+    private Runnable checkBuildTimes() {
+        return () -> {
             try {
                 // ToDo: check with thread mentioned from log4j log and remove afterwards
                 LOGGER.debug("Current thread: " + Thread.currentThread());
@@ -75,7 +81,7 @@ public class BuildTimeoutHandler {
             } catch (Exception e) {
                 LOGGER.error("There was an exception while checking build duration times: " + e);
             }
-        }, SCHEDULER_INITIAL_DELAY_IN_SECONDS, SCHEDULER_PERIOD_IN_SECONDS, SECONDS);
+        };
     }
 
     public void handleBuild(SRunningBuild build, SBuildFeatureDescriptor elasticTimeoutFailureCondition, BuildStatus buildStatus) {
@@ -106,6 +112,7 @@ public class BuildTimeoutHandler {
             LOGGER.debug(String.format("Calculating time out times for %s based on those previous builds: %s", build, buildsToConsider));
             // get the total time of all relevant previous builds
             int exceedValue = Integer.parseInt(timeoutParameters.get(ElasticTimeoutFailureCondition.PARAM_EXCEED_VALUE));
+            // Todo: we can extract PARAM_EXCEED_UNIT as var)
             boolean usePercentage = timeoutParameters.get(ElasticTimeoutFailureCondition.PARAM_EXCEED_UNIT).equals(ElasticTimeoutFailureCondition.PARAM_EXCEED_UNIT_PERCENT);
             LOGGER.debug(String.format("Used exceed value: %d (%s)", exceedValue, timeoutParameters.get(ElasticTimeoutFailureCondition.PARAM_EXCEED_UNIT)));
             long totalTime = buildsToConsider.stream().mapToLong(b -> b.getDuration()).sum();
