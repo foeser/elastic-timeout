@@ -6,4 +6,5 @@
     <bean class="com.github.foeser.teamcity.elastictimeout.ElasticTimeoutFailureCondition"/>
     <bean class="com.github.foeser.teamcity.elastictimeout.BuildEventListener"/>
     <bean class="com.github.foeser.teamcity.elastictimeout.BuildTimeoutHandler"/>
+    <bean class="com.github.foeser.teamcity.elastictimeout.schedulers.TeamcityExecutorService"/>
 </beans>

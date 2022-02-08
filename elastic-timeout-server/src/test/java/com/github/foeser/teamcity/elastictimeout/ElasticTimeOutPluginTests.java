@@ -3,6 +3,7 @@ package com.github.foeser.teamcity.elastictimeout;
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.LoggerContext;
+import com.github.foeser.teamcity.elastictimeout.schedulers.ManualScheduler;
 import com.github.foeser.teamcity.elastictimeout.utils.MemoryAppender;
 import org.slf4j.LoggerFactory;
 
@@ -17,8 +18,6 @@ import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
 import java.util.*;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.ScheduledThreadPoolExecutor;
 
 // https://github.com/jmock-developers/jmock-library/blob/master/jmock/src/test/java/org/jmock/test/unit/lib/concurrent/DeterministicSchedulerTests.java#L177
 
@@ -28,7 +27,9 @@ public class ElasticTimeOutPluginTests extends BaseTestCase {
     private BuildTimeoutHandler buildTimeoutHandler;
     private SBuildFeatureDescriptor mockSBuildFeatureDescriptor;
     private BuildHistory buildHistory;
-    MemoryAppender memoryAppender;
+    private MemoryAppender memoryAppender;
+    private ManualScheduler manualScheduler;
+    private RunningBuildsManager runningBuildsManager;
 
     @BeforeMethod
     @Override
@@ -37,20 +38,22 @@ public class ElasticTimeOutPluginTests extends BaseTestCase {
         context = new Mockery();
         final EventDispatcher<BuildServerListener> eventDispatcher = EventDispatcher.create(BuildServerListener.class);
         final ExecutorServices executorServices = context.mock(ExecutorServices.class);
-        final RunningBuildsManager runningBuildsManager = context.mock(RunningBuildsManager.class);
+        runningBuildsManager = context.mock(RunningBuildsManager.class);
         buildHistory = context.mock(BuildHistory.class);
         mockSBuildFeatureDescriptor = context.mock(SBuildFeatureDescriptor.class);
 
-        context.checking(new Expectations() {
+        /*context.checking(new Expectations() {
             {
                 ScheduledExecutorService ses = new ScheduledThreadPoolExecutor(1);
                 allowing(executorServices).getNormalExecutorService(); will(returnValue(ses));
             }
-        });
-        buildTimeoutHandler = new BuildTimeoutHandler(executorServices, runningBuildsManager, buildHistory);
+        });*/
+        manualScheduler = new ManualScheduler();
+        buildTimeoutHandler = new BuildTimeoutHandler(manualScheduler, runningBuildsManager, buildHistory);
         buildEventListener = new BuildEventListener(eventDispatcher, buildTimeoutHandler);
 
         // Todo: Test if actually logging on Teamcity works (maybe switch to AppenderSkeleton then: https://stackoverflow.com/a/1828268/1072693)
+        // Todo: no it doesn't with slf4j :(
         // in order to just get simple logs printed to console we can set the log Level to DEBUG (as the root level set in log4j.xml get set later back to WARN, see debug output)
         // also logback (at least context) would need to be removed and assuming using org.apache.log4j and not org.slf4j
         //org.apache.log4j.Logger.getLogger(BuildEventListener.class).setLevel(org.apache.log4j.Level.DEBUG);
@@ -94,18 +97,25 @@ public class ElasticTimeOutPluginTests extends BaseTestCase {
                 atLeast(2).of(mockSRunningBuild).getBuildFeaturesOfType(ElasticTimeoutFailureCondition.TYPE); will (returnValue(Collections.singleton(mockSBuildFeatureDescriptor)));
                 oneOf(mockSBuildFeatureDescriptor).getParameters(); will (returnValue(elasticTimeoutFailureConditionParameters));
                 oneOf(buildHistory).getEntriesBefore(mockSRunningBuild, true); will (returnValue(Arrays.asList(build, build, build, build)));
-                //atLeast(3).of (build).getBuildStatus(); will(returnValue(Status.NORMAL));
                 atLeast(4).of (build).getDuration();
                 will(onConsecutiveCalls(
                         returnValue(10L),
                         returnValue(20L),
                         returnValue(30L)));
                 atLeast(2).of(mockSRunningBuild).getBuildId(); will (returnValue(1L));
+                atLeast(2).of(runningBuildsManager).findRunningBuildById(1L); will (returnValue(mockSRunningBuild));
+                atLeast(2).of (mockSRunningBuild).getDuration();
+                will(onConsecutiveCalls(
+                        returnValue(5L),
+                        returnValue(60L)));
             }
         });
         buildEventListener.buildStarted(mockSRunningBuild);
         assertEquals(1, buildTimeoutHandler.getCurrentBuildsConsidered());
+        // ToDo: add expectation to not have stop() ever called (as it get removed earlier) and can also think of asserting for the log done by BuildEventListener
+        manualScheduler.invoke();
         buildEventListener.beforeBuildFinish(mockSRunningBuild);
+        manualScheduler.invoke();
         assertEquals(0, buildTimeoutHandler.getCurrentBuildsConsidered());
 
     }
