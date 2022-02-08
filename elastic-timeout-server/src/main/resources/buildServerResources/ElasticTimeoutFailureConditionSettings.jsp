@@ -13,7 +13,7 @@
         <th>How many taking into consideration?</th>
         <td>
             <props:textProperty name="build_count"/>
-            <span class="smallNote">If there are not enough builds in history the condition will be ignored until there is a suitable amount passed.</span>
+            <span class="smallNote">If there are not enough builds in history the condition will be ignored until there is a suitable amount passed. Minimum value is 2.</span>
         </td>
     </tr>
     <tr>

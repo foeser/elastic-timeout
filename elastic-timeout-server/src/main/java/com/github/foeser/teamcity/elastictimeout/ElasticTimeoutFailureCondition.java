@@ -4,6 +4,7 @@ import jetbrains.buildServer.log.Loggers;
 import jetbrains.buildServer.serverSide.BuildFeature;
 import jetbrains.buildServer.serverSide.InvalidProperty;
 import jetbrains.buildServer.serverSide.PropertiesProcessor;
+import jetbrains.buildServer.util.StringUtil;
 import jetbrains.buildServer.web.openapi.PluginDescriptor;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
@@ -106,12 +107,25 @@ public class ElasticTimeoutFailureCondition extends BuildFeature {
     @Nullable
     @Override
     public PropertiesProcessor getParametersProcessor() {
-        // ToDo: we need to validate the user input
-        return new PropertiesProcessor() {
-            public Collection<InvalidProperty> process(Map<String, String> params) {
-                List<InvalidProperty> errors = new ArrayList<InvalidProperty>();
-                return errors;
+        return params -> {
+            List<InvalidProperty> errors = new ArrayList<>();
+
+            String buildCount = params.get(PARAM_BUILD_COUNT);
+            if (StringUtil.isEmptyOrSpaces(buildCount)) {
+                errors.add(new InvalidProperty(PARAM_BUILD_COUNT, "You need to define a build count."));
+            } else if (!StringUtil.isAPositiveNumber(buildCount)) {
+                errors.add(new InvalidProperty(PARAM_BUILD_COUNT, "Only positive numbers are allowed for the build count."));
+            } else if (StringUtil.parseInt(buildCount, 2) < 2) {
+                errors.add(new InvalidProperty(PARAM_BUILD_COUNT, "The minimum build count is 2."));
             }
+
+            String exceedValue = params.get(PARAM_EXCEED_VALUE);
+            if (StringUtil.isEmptyOrSpaces(exceedValue)) {
+                errors.add(new InvalidProperty(PARAM_EXCEED_VALUE, "You need to define a threshold value."));
+            } else if (!StringUtil.isAPositiveNumber(exceedValue)) {
+                errors.add(new InvalidProperty(PARAM_EXCEED_VALUE, "Only positive numbers are allowed for the threshold."));
+            }
+            return errors;
         };
     }
 

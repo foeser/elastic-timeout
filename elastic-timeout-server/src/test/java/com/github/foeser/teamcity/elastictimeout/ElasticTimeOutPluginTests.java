@@ -5,6 +5,7 @@ import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.LoggerContext;
 import com.github.foeser.teamcity.elastictimeout.schedulers.ManualScheduler;
 import com.github.foeser.teamcity.elastictimeout.utils.MemoryAppender;
+import jetbrains.buildServer.web.openapi.PluginDescriptor;
 import org.slf4j.LoggerFactory;
 
 import jetbrains.buildServer.BaseTestCase;
@@ -18,6 +19,9 @@ import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
 import java.util.*;
+
+import static com.github.foeser.teamcity.elastictimeout.ElasticTimeoutFailureCondition.PARAM_BUILD_COUNT;
+import static com.github.foeser.teamcity.elastictimeout.ElasticTimeoutFailureCondition.PARAM_EXCEED_VALUE;
 
 // https://github.com/jmock-developers/jmock-library/blob/master/jmock/src/test/java/org/jmock/test/unit/lib/concurrent/DeterministicSchedulerTests.java#L177
 
@@ -84,9 +88,9 @@ public class ElasticTimeOutPluginTests extends BaseTestCase {
         final SRunningBuild mockSRunningBuild = context.mock(SRunningBuild.class);
         // Todo: get the default params from the actual class/object
         final Map<String, String> elasticTimeoutFailureConditionParameters = Map.ofEntries(
-                new AbstractMap.SimpleEntry(ElasticTimeoutFailureCondition.PARAM_BUILD_COUNT, "3"),
+                new AbstractMap.SimpleEntry(PARAM_BUILD_COUNT, "3"),
                 new AbstractMap.SimpleEntry(ElasticTimeoutFailureCondition.PARAM_STATUS, "Successful"),
-                new AbstractMap.SimpleEntry(ElasticTimeoutFailureCondition.PARAM_EXCEED_VALUE, "25"),
+                new AbstractMap.SimpleEntry(PARAM_EXCEED_VALUE, "25"),
                 new AbstractMap.SimpleEntry(ElasticTimeoutFailureCondition.PARAM_EXCEED_UNIT, "seconds"),
                 new AbstractMap.SimpleEntry(ElasticTimeoutFailureCondition.PARAM_STOP_BUILD, "true")
         );
@@ -141,7 +145,20 @@ public class ElasticTimeOutPluginTests extends BaseTestCase {
     }
     @Test
     void testUserInput() {
-        // add build with missconfigured feature
+        PluginDescriptor mockPluginDescriptor = context.mock(PluginDescriptor.class);
+        context.checking(new Expectations() {
+            {
+                oneOf(mockPluginDescriptor).getPluginResourcesPath("ElasticTimeoutFailureConditionSettings.jsp"); will (returnValue(""));
+            }
+        });
+        ElasticTimeoutFailureCondition failureCondition = new ElasticTimeoutFailureCondition(mockPluginDescriptor);
+        final Map<String, String> faultyParameters = Map.ofEntries(
+                new AbstractMap.SimpleEntry(PARAM_BUILD_COUNT, " ")
+        );
+        List<InvalidProperty> invalidProperties = new ArrayList<>(failureCondition.getParametersProcessor().process(faultyParameters));
+        assertEquals(2, invalidProperties.size());
+        assertEquals("You need to define a build count.", invalidProperties.get(0).getInvalidReason());
+        assertEquals("You need to define a threshold value.", invalidProperties.get(1).getInvalidReason());
     }
     @Test
     void successfulOnly() {
