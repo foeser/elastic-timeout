@@ -1,6 +1,7 @@
 package com.github.foeser.teamcity.elastictimeout;
 
 import com.github.foeser.teamcity.elastictimeout.schedulers.Scheduler;
+import jetbrains.buildServer.Build;
 import jetbrains.buildServer.BuildProblemData;
 import jetbrains.buildServer.log.Loggers;
 import jetbrains.buildServer.serverSide.*;
@@ -18,14 +19,14 @@ public class BuildTimeoutHandler {
     //private static final Logger LOGGER = LoggerFactory.getLogger(BuildEventListener.class);
     private static final Logger LOGGER = Logger.getLogger(Loggers.SERVER_CATEGORY);
     // concurrent hashmap is weak consistent but should be okay for our usage (esp. since we don't update values but rather add or remove keys)
-    private ConcurrentHashMap<Long, Map.Entry<Long, Boolean>> mapBuildIdMaxBuildDuration;
-    private BuildHistory buildHistory;
-    private RunningBuildsManager runningBuildsManager;
+    private final ConcurrentHashMap<Long, Map.Entry<Long, Boolean>> mapBuildIdMaxBuildDuration;
+    private final BuildHistory buildHistory;
+    private final RunningBuildsManager runningBuildsManager;
 
     public BuildTimeoutHandler(@NotNull Scheduler executorServices,
                                @NotNull RunningBuildsManager runningBuildsManager,
                                @NotNull BuildHistory buildHistory) {
-        mapBuildIdMaxBuildDuration = new ConcurrentHashMap();
+        mapBuildIdMaxBuildDuration = new ConcurrentHashMap<>();
         this.buildHistory = buildHistory;
         this.runningBuildsManager = runningBuildsManager;
         executorServices.setRunnable(() -> checkBuildsForTimeout());
@@ -102,7 +103,6 @@ public class BuildTimeoutHandler {
         if(previousBuilds.size() < numPreviousBuildsToConsider) {
             // in case we don't have enough builds we simply don't care
             LOGGER.debug(String.format("[%s] has elastic timout enabled but doesn't have enough builds in history to consider (%d/%d). Skipping...", build, previousBuilds.size(), numPreviousBuildsToConsider));
-            return;
         } else {
             List<SFinishedBuild> buildsToConsider = previousBuilds.subList(0, numPreviousBuildsToConsider);
             LOGGER.debug(String.format("Calculating time out times for %s based on those previous builds: %s", build, buildsToConsider));

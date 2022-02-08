@@ -80,14 +80,14 @@ public class ElasticTimeoutFailureCondition extends BuildFeature {
         }
 
         if(!getParameterWithDefaults(params, PARAM_BUILD_COUNT).isEmpty()) {
-            sb.append(" " + getParameterWithDefaults(params, PARAM_BUILD_COUNT));
+            sb.append(" ").append(getParameterWithDefaults(params, PARAM_BUILD_COUNT));
         }
 
         if (getParameterWithDefaults(params, PARAM_STATUS).equals(PARAM_STATUS_SUCCESSFUL)) {
             sb.append(" successful");
         }
 
-        sb.append(" builds by " + getParameterWithDefaults(params, PARAM_EXCEED_VALUE) + " " + getParameterWithDefaults(params, PARAM_EXCEED_UNIT));
+        sb.append(" builds by ").append(getParameterWithDefaults(params, PARAM_EXCEED_VALUE)).append(" ").append(getParameterWithDefaults(params, PARAM_EXCEED_UNIT));
         return sb.toString();
     }
 
@@ -97,7 +97,7 @@ public class ElasticTimeoutFailureCondition extends BuildFeature {
         }
 
         Map<String, String> defaultParameters = getDefaultParameters();
-        if (defaultParameters.containsKey(name)) {
+        if (defaultParameters != null && defaultParameters.containsKey(name)) {
             return defaultParameters.get(name);
         }
 

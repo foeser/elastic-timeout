@@ -10,7 +10,6 @@ import org.slf4j.LoggerFactory;
 
 import jetbrains.buildServer.BaseTestCase;
 import jetbrains.buildServer.serverSide.*;
-import jetbrains.buildServer.serverSide.executors.ExecutorServices;
 import jetbrains.buildServer.util.EventDispatcher;
 
 import org.jmock.Mockery;
@@ -41,17 +40,10 @@ public class ElasticTimeOutPluginTests extends BaseTestCase {
         super.setUp();
         context = new Mockery();
         final EventDispatcher<BuildServerListener> eventDispatcher = EventDispatcher.create(BuildServerListener.class);
-        final ExecutorServices executorServices = context.mock(ExecutorServices.class);
         runningBuildsManager = context.mock(RunningBuildsManager.class);
         buildHistory = context.mock(BuildHistory.class);
         mockSBuildFeatureDescriptor = context.mock(SBuildFeatureDescriptor.class);
 
-        /*context.checking(new Expectations() {
-            {
-                ScheduledExecutorService ses = new ScheduledThreadPoolExecutor(1);
-                allowing(executorServices).getNormalExecutorService(); will(returnValue(ses));
-            }
-        });*/
         manualScheduler = new ManualScheduler();
         buildTimeoutHandler = new BuildTimeoutHandler(manualScheduler, runningBuildsManager, buildHistory);
         buildEventListener = new BuildEventListener(eventDispatcher, buildTimeoutHandler);

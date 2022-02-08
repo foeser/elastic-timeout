@@ -8,7 +8,7 @@ import static java.util.concurrent.TimeUnit.SECONDS;
 
 public class TeamcityExecutorService implements Scheduler {
     private static final long SCHEDULER_INITIAL_DELAY_IN_SECONDS = 10;
-    private static long SCHEDULER_PERIOD_IN_SECONDS = 10;
+    private static final long SCHEDULER_PERIOD_IN_SECONDS = 10;
     private final ScheduledExecutorService scheduledExecutorService;
     private Runnable runnable;
 
