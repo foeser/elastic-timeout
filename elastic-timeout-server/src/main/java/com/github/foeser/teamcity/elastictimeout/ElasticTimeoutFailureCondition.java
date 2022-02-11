@@ -126,6 +126,9 @@ public class ElasticTimeoutFailureCondition extends BuildFeature {
                 errors.add(new InvalidProperty(PARAM_EXCEED_VALUE, "Only positive numbers are allowed for the threshold."));
             }
             return errors;
+
+            // Todo: check also that exceed values needs to be higher then the actual scheduler interval  (10s, later 30s)
+
         };
     }
 
@@ -133,7 +136,7 @@ public class ElasticTimeoutFailureCondition extends BuildFeature {
     public Map<String, String> getDefaultParameters() {
         final HashMap<String, String> map = new HashMap<>();
         map.put(PARAM_STATUS, "Successful");
-        map.put(PARAM_BUILD_COUNT, "5");
+        map.put(PARAM_BUILD_COUNT, "3");
         map.put(PARAM_EXCEED_VALUE, "25");
         map.put(PARAM_EXCEED_UNIT, "seconds");
         map.put(PARAM_STOP_BUILD, "true");

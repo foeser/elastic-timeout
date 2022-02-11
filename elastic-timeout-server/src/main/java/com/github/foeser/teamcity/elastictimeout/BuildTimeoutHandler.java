@@ -1,13 +1,12 @@
 package com.github.foeser.teamcity.elastictimeout;
 
 import com.github.foeser.teamcity.elastictimeout.schedulers.Scheduler;
-import jetbrains.buildServer.Build;
 import jetbrains.buildServer.BuildProblemData;
-import jetbrains.buildServer.log.Loggers;
 import jetbrains.buildServer.serverSide.*;
 
-import org.apache.log4j.Logger;
 import org.jetbrains.annotations.NotNull;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.List;
 import java.util.Map;
@@ -16,8 +15,8 @@ import static jetbrains.buildServer.BuildProblemTypes.TC_EXECUTION_TIMEOUT_TYPE;
 
 public class BuildTimeoutHandler {
 
-    //private static final Logger LOGGER = LoggerFactory.getLogger(BuildEventListener.class);
-    private static final Logger LOGGER = Logger.getLogger(Loggers.SERVER_CATEGORY);
+    private static final Logger LOGGER = LoggerFactory.getLogger(BuildTimeoutHandler.class);
+    //private static final Logger LOGGER = Logger.getLogger(Loggers.SERVER_CATEGORY);
     // concurrent hashmap is weak consistent but should be okay for our usage (esp. since we don't update values but rather add or remove keys)
     private final ConcurrentHashMap<Long, Map.Entry<Long, Boolean>> mapBuildIdMaxBuildDuration;
     private final BuildHistory buildHistory;
@@ -42,10 +41,7 @@ public class BuildTimeoutHandler {
                 LOGGER.debug("No builds to check, quitting early");
                 return;
             }
-            /*for (Iterator<ConcurrentHashMap.Entry<Long, Long>> iter = mapBuildIdMaxBuildDuration.entrySet().iterator(); iter.hasNext();) {
-                ConcurrentHashMap.Entry<Long,Long> entry = iter.next();
-                ....
-            }*/
+
             mapBuildIdMaxBuildDuration.forEach((id, buildDescriptor) -> {
                 SRunningBuild build = runningBuildsManager.findRunningBuildById(id);
                 if(build == null) {
@@ -54,8 +50,6 @@ public class BuildTimeoutHandler {
                     return;
                 }
                 long currentBuildDuration = build.getDuration();
-                // Todo: check net buildtime which should not include sync times (potentially check SBuild.html#getStatisticValues() and SRunningBuild.html#getCurrentPath() to check if stil syncing)
-                //long currentBuildDuration = build.getElapsedTime();
                 long maxAllowedBuildDuration = buildDescriptor.getKey();
                 Boolean stopBuildOnTimeout = buildDescriptor.getValue();
                 if (currentBuildDuration > maxAllowedBuildDuration) {
@@ -136,7 +130,7 @@ public class BuildTimeoutHandler {
         }
     }
 
-    public int getCurrentBuildsConsidered() {
+    public int getCurrentBuildsInConsideration() {
         return mapBuildIdMaxBuildDuration.size();
     }
 }

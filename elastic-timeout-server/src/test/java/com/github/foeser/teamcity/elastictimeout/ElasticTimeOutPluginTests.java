@@ -33,6 +33,7 @@ public class ElasticTimeOutPluginTests extends BaseTestCase {
     private MemoryAppender memoryAppender;
     private ManualScheduler manualScheduler;
     private RunningBuildsManager runningBuildsManager;
+    private ElasticTimeoutFailureCondition failureCondition;
 
     @BeforeMethod
     @Override
@@ -47,6 +48,13 @@ public class ElasticTimeOutPluginTests extends BaseTestCase {
         manualScheduler = new ManualScheduler();
         buildTimeoutHandler = new BuildTimeoutHandler(manualScheduler, runningBuildsManager, buildHistory);
         buildEventListener = new BuildEventListener(eventDispatcher, buildTimeoutHandler);
+        PluginDescriptor mockPluginDescriptor = context.mock(PluginDescriptor.class);
+        context.checking(new Expectations() {
+            {
+                oneOf(mockPluginDescriptor).getPluginResourcesPath("ElasticTimeoutFailureConditionSettings.jsp"); will (returnValue(""));
+            }
+        });
+        failureCondition = new ElasticTimeoutFailureCondition(mockPluginDescriptor);
 
         // Todo: Test if actually logging on Teamcity works (maybe switch to AppenderSkeleton then: https://stackoverflow.com/a/1828268/1072693)
         // Todo: no it doesn't with slf4j :(
@@ -63,56 +71,61 @@ public class ElasticTimeOutPluginTests extends BaseTestCase {
     }
 
     @Test
+    // add build (configuration) without ElasticTimeout build feature enabled, expected result would be that it won't get considered at all
     public void addBuildWithoutBuildFeature() {
         final SRunningBuild mockSRunningBuild = context.mock(SRunningBuild.class);
         context.checking(new Expectations() {
            {
-               // let's return an empty array
+               // let's simply return an empty array
                oneOf(mockSRunningBuild).getBuildFeaturesOfType(ElasticTimeoutFailureCondition.TYPE); will (returnValue( new ArrayList<SBuildFeatureDescriptor>()));
            }
         });
         buildEventListener.buildStarted(mockSRunningBuild);
-        assertEquals(0, buildTimeoutHandler.getCurrentBuildsConsidered());
+        assertEquals(0, buildTimeoutHandler.getCurrentBuildsInConsideration());
         assertEquals(1, memoryAppender.search(String.format("%s [%s]", "Either none or more then one enabled AvgBuildTimeFailureCondition feature (failure condition) in that build", mockSRunningBuild)).size());
     }
     @Test
+    // add valid build (timeout feature enabled with proper build history) but finish it earlier, expected result would be that it get removed from consideration
     public void removeBuild() {
         final SRunningBuild mockSRunningBuild = context.mock(SRunningBuild.class);
-        // Todo: get the default params from the actual class/object
-        final Map<String, String> elasticTimeoutFailureConditionParameters = Map.ofEntries(
-                new AbstractMap.SimpleEntry(PARAM_BUILD_COUNT, "3"),
-                new AbstractMap.SimpleEntry(ElasticTimeoutFailureCondition.PARAM_STATUS, "Successful"),
-                new AbstractMap.SimpleEntry(PARAM_EXCEED_VALUE, "25"),
-                new AbstractMap.SimpleEntry(ElasticTimeoutFailureCondition.PARAM_EXCEED_UNIT, "seconds"),
-                new AbstractMap.SimpleEntry(ElasticTimeoutFailureCondition.PARAM_STOP_BUILD, "true")
-        );
-        final SFinishedBuild build = context.mock(SFinishedBuild.class);
+        final Map<String, String> elasticTimeoutFailureConditionParameters = failureCondition.getDefaultParameters();
+        final SFinishedBuild mockSFinishedBuild = context.mock(SFinishedBuild.class);
 
         context.checking(new Expectations() {
             {
+                // get called twice, once while adding (buildStarted) and once while removing (beforeBuildFinish)
                 atLeast(2).of(mockSRunningBuild).getBuildFeaturesOfType(ElasticTimeoutFailureCondition.TYPE); will (returnValue(Collections.singleton(mockSBuildFeatureDescriptor)));
                 oneOf(mockSBuildFeatureDescriptor).getParameters(); will (returnValue(elasticTimeoutFailureConditionParameters));
-                oneOf(buildHistory).getEntriesBefore(mockSRunningBuild, true); will (returnValue(Arrays.asList(build, build, build, build)));
-                atLeast(4).of (build).getDuration();
+                // based on plugins default settings we add three builds to the history and querying accordingly three times the duration (returning different values each time)
+                oneOf(buildHistory).getEntriesBefore(mockSRunningBuild, true); will (returnValue(Arrays.asList(mockSFinishedBuild, mockSFinishedBuild, mockSFinishedBuild)));
+                atLeast(3).of (mockSFinishedBuild).getDuration();
                 will(onConsecutiveCalls(
                         returnValue(10L),
                         returnValue(20L),
                         returnValue(30L)));
+                // get called twice, within scheduler and once while removing
                 atLeast(2).of(mockSRunningBuild).getBuildId(); will (returnValue(1L));
+                // get invoked twice within scheduler, and return below timeout value (45s)
                 atLeast(2).of(runningBuildsManager).findRunningBuildById(1L); will (returnValue(mockSRunningBuild));
-                atLeast(2).of (mockSRunningBuild).getDuration();
+                atLeast(2).of(mockSRunningBuild).getDuration();
                 will(onConsecutiveCalls(
-                        returnValue(5L),
-                        returnValue(60L)));
+                        returnValue(13L),
+                        returnValue(38L)));
+                // not working :( while actually using oneOf() would work, no clue...
+                //never(mockSRunningBuild).stop(with(any(DummyUser.class)), with(any(String.class)));
             }
         });
         buildEventListener.buildStarted(mockSRunningBuild);
-        assertEquals(1, buildTimeoutHandler.getCurrentBuildsConsidered());
-        // ToDo: add expectation to not have stop() ever called (as it get removed earlier) and can also think of asserting for the log done by BuildEventListener
+        assertEquals(1, buildTimeoutHandler.getCurrentBuildsInConsideration());
+        // ToDo: think of asserting for the log done by BuildEventListener (memory adapter)
+        // invoke scheduler twice
         manualScheduler.invoke();
+        manualScheduler.invoke();
+        // finish build early
         buildEventListener.beforeBuildFinish(mockSRunningBuild);
+        // invoke again after build has finished verifying that there are no builds in consideration anymore
         manualScheduler.invoke();
-        assertEquals(0, buildTimeoutHandler.getCurrentBuildsConsidered());
+        assertEquals(0, buildTimeoutHandler.getCurrentBuildsInConsideration());
 
     }
     @Test
@@ -135,29 +148,55 @@ public class ElasticTimeOutPluginTests extends BaseTestCase {
     void testFixedValueCalculation() {
         // add build and test timeout based on fixed values calculations
     }
-    @Test
-    void testUserInput() {
-        PluginDescriptor mockPluginDescriptor = context.mock(PluginDescriptor.class);
-        context.checking(new Expectations() {
-            {
-                oneOf(mockPluginDescriptor).getPluginResourcesPath("ElasticTimeoutFailureConditionSettings.jsp"); will (returnValue(""));
-            }
-        });
-        ElasticTimeoutFailureCondition failureCondition = new ElasticTimeoutFailureCondition(mockPluginDescriptor);
-        final Map<String, String> faultyParameters = Map.ofEntries(
-                new AbstractMap.SimpleEntry(PARAM_BUILD_COUNT, " ")
+    private ArrayList<InvalidProperty> setupParamTest(String build_count, String exceed_value) {
+        Map<String, String> faultyParameters = Map.ofEntries(
+                new AbstractMap.SimpleEntry(PARAM_BUILD_COUNT, build_count),
+                new AbstractMap.SimpleEntry(PARAM_EXCEED_VALUE, exceed_value)
         );
-        List<InvalidProperty> invalidProperties = new ArrayList<>(failureCondition.getParametersProcessor().process(faultyParameters));
-        assertEquals(2, invalidProperties.size());
+        return new ArrayList<>(failureCondition.getParametersProcessor().process(faultyParameters));
+    }
+    @Test
+    void testParamBuildCountUserInput() {
+        List<InvalidProperty> invalidProperties = setupParamTest(" ", "25");
+        assertEquals(1, invalidProperties.size());
         assertEquals("You need to define a build count.", invalidProperties.get(0).getInvalidReason());
-        assertEquals("You need to define a threshold value.", invalidProperties.get(1).getInvalidReason());
+
+        invalidProperties = setupParamTest("", "25");
+        assertEquals(1, invalidProperties.size());
+        assertEquals("You need to define a build count.", invalidProperties.get(0).getInvalidReason());
+
+        invalidProperties = setupParamTest("-34", "25");
+        assertEquals(1, invalidProperties.size());
+        assertEquals("Only positive numbers are allowed for the build count.", invalidProperties.get(0).getInvalidReason());
+
+        invalidProperties = setupParamTest("Password123", "25");
+        assertEquals(1, invalidProperties.size());
+        assertEquals("Only positive numbers are allowed for the build count.", invalidProperties.get(0).getInvalidReason());
+
+        invalidProperties = setupParamTest("1", "25");
+        assertEquals(1, invalidProperties.size());
+        assertEquals("The minimum build count is 2.", invalidProperties.get(0).getInvalidReason());
+    }
+    @Test
+    void testParamExceedValueUserInput() {
+        List<InvalidProperty> invalidProperties = setupParamTest("3", " ");
+        assertEquals(1, invalidProperties.size());
+        assertEquals("You need to define a threshold value.", invalidProperties.get(0).getInvalidReason());
+
+        invalidProperties = setupParamTest("3", "");
+        assertEquals(1, invalidProperties.size());
+        assertEquals("You need to define a threshold value.", invalidProperties.get(0).getInvalidReason());
+
+        invalidProperties = setupParamTest("3", "-34");
+        assertEquals(1, invalidProperties.size());
+        assertEquals("Only positive numbers are allowed for the threshold.", invalidProperties.get(0).getInvalidReason());
+
+        invalidProperties = setupParamTest("3", "Password123");
+        assertEquals(1, invalidProperties.size());
+        assertEquals("Only positive numbers are allowed for the threshold.", invalidProperties.get(0).getInvalidReason());
     }
     @Test
     void successfulOnly() {
         // add build and test scenario with succesful and all builds
-    }
-    @Test
-    void testVCSTimes() {
-        // add build and test if build duration includes VCS or artifact operations
     }
 }
