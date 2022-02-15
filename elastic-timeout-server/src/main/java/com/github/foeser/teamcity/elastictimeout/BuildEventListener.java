@@ -37,30 +37,16 @@ public class BuildEventListener extends BuildServerAdapter {
         }
     }
 
-    /*private SBuildFeatureDescriptor getElasticTimeoutFeature(SRunningBuild build) {
-        SBuildType buildType = build.getBuildType();
-        if (buildType == null) {
-            return null;
-        }
-
-        for (SBuildFeatureDescriptor feature : buildType.getResolvedSettings().getBuildFeatures()) {
-            if (ElasticTimeoutFailureCondition.TYPE.equals(feature.getType())) {
-                return feature;
-            }
-        }
-
-        return null;
-    }*/
-
     private SBuildFeatureDescriptor getFeature(SRunningBuild build) {
-        // ToDo: test that SBuilds getBuildFeaturesOfType() returns really just enabled ones (compared to the method from BuildTypeSettings)
-        final Collection<SBuildFeatureDescriptor> avgBuildTimeFailureConditions = build.getBuildFeaturesOfType(ElasticTimeoutFailureCondition.TYPE);
-        // ToDo: change handling, exception for more then one build and log when there is nothing
-        if(avgBuildTimeFailureConditions.size() != 1) {
-            // if the build doesn't use our failure condition we just can skip
-            LOGGER.debug(String.format("%s [%s]", "Either none or more then one enabled AvgBuildTimeFailureCondition feature (failure condition) in that build", build));
+        final Collection<SBuildFeatureDescriptor> elasticTimeoutFailureConditions = build.getBuildFeaturesOfType(ElasticTimeoutFailureCondition.TYPE);
+        if(elasticTimeoutFailureConditions.size() == 0) {
+            LOGGER.debug(String.format("%s doesn't have the elastic timeout failure condition set or enabled. Skipping...", build));
+            return null;
+        } else if(elasticTimeoutFailureConditions.size() > 1) {
+            // should never happen due to isMultipleFeaturesPerBuildTypeAllowed is set to false
+            LOGGER.error(String.format("%s has more then elastic timeout failure condition set!", build));
             return null;
         }
-        return avgBuildTimeFailureConditions.stream().findFirst().get();
+        return elasticTimeoutFailureConditions.stream().findFirst().get();
     }
 }

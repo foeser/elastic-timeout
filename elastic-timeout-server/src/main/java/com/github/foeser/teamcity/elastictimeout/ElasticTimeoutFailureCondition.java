@@ -70,7 +70,7 @@ public class ElasticTimeoutFailureCondition extends BuildFeature {
     @NotNull
     @Override
     public String describeParameters(@NotNull Map<String, String> params) {
-        // ToDo: align with desc from metric based fail condition to be more consistent
+        // ToDo: align with desc from metric based fail condition to be more consistent ("anchor value")
         StringBuilder sb = new StringBuilder();
         LOGGER.log(Level.WARN, "param: " + getParameterWithDefaults(params, PARAM_STOP_BUILD));
         if(getParameterWithDefaults(params, PARAM_STOP_BUILD).equals("true")) {

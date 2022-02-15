@@ -55,14 +55,15 @@ public class BuildTimeoutHandler {
                 if (currentBuildDuration > maxAllowedBuildDuration) {
                     // don't consider this build anymore and remove from map
                     mapBuildIdMaxBuildDuration.remove(id);
-                    // ToDo: adapt to desc of TC native implementation
-                    String buildTimeoutDescription = "Build duration exceed maximum allowed time of " + maxAllowedBuildDuration;
                     if(stopBuildOnTimeout) {
+                        String buildTimeoutDescription = String.format("The build %s has been running for more than %d. Terminating...", build, maxAllowedBuildDuration);
+                        // adding a dummy user is important, otherwise the build get constantly re-queued
                         build.stop(new DummyUser(), buildTimeoutDescription);
                         //build.setInterrupted(RunningBuildState.INTERRUPTED_BY_SYSTEM, null, buildTimeoutDescription);
                         build.addBuildProblem(BuildProblemData.createBuildProblem(String.valueOf(buildTimeoutDescription.hashCode()), TC_EXECUTION_TIMEOUT_TYPE, buildTimeoutDescription));
                         LOGGER.info(String.format("%s is running already %d and exceed maximum allowed time of %d and got stopped.", build, currentBuildDuration, maxAllowedBuildDuration));
                     } else {
+                        String buildTimeoutDescription = String.format("The build %s has been running for more than %d. Adding problem to build...", build, maxAllowedBuildDuration);
                         build.addBuildProblem(BuildProblemData.createBuildProblem(String.valueOf(buildTimeoutDescription.hashCode()), TC_EXECUTION_TIMEOUT_TYPE, buildTimeoutDescription));
                         LOGGER.info(String.format("%s is running already %d and exceed maximum allowed time of %d and got annotated with build problem.", build, currentBuildDuration, maxAllowedBuildDuration));
                     }
@@ -102,7 +103,6 @@ public class BuildTimeoutHandler {
             LOGGER.debug(String.format("Calculating time out times for %s based on those previous builds: %s", build, buildsToConsider));
             // get the total time of all relevant previous builds
             int exceedValue = Integer.parseInt(timeoutParameters.get(ElasticTimeoutFailureCondition.PARAM_EXCEED_VALUE));
-            // Todo: we can extract PARAM_EXCEED_UNIT as var)
             boolean usePercentage = timeoutParameters.get(ElasticTimeoutFailureCondition.PARAM_EXCEED_UNIT).equals(ElasticTimeoutFailureCondition.PARAM_EXCEED_UNIT_PERCENT);
             LOGGER.debug(String.format("Used exceed value: %d (%s)", exceedValue, timeoutParameters.get(ElasticTimeoutFailureCondition.PARAM_EXCEED_UNIT)));
             long totalTime = buildsToConsider.stream().mapToLong(b -> b.getDuration()).sum();
