@@ -19,8 +19,8 @@
     <tr>
         <th>Threshold (exceeds by):</th>
         <td>
-            <props:textProperty name="exceed_value"/>
-            <props:selectProperty name="exceed_unit">
+            <props:textProperty name="anchor_value"/>
+            <props:selectProperty name="anchor_unit">
                 <props:option value="seconds">
                     <c:out value="seconds"/>
                 </props:option>

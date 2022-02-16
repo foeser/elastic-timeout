@@ -14,7 +14,7 @@ import java.util.List;
 import java.util.Map;
 
 import static com.github.foeser.teamcity.elastictimeout.ElasticTimeoutFailureCondition.PARAM_BUILD_COUNT;
-import static com.github.foeser.teamcity.elastictimeout.ElasticTimeoutFailureCondition.PARAM_EXCEED_VALUE;
+import static com.github.foeser.teamcity.elastictimeout.ElasticTimeoutFailureCondition.PARAM_ANCHOR_VALUE;
 
 public class ParameterValidationTests extends BaseTestCase {
     private Mockery context;
@@ -37,7 +37,7 @@ public class ParameterValidationTests extends BaseTestCase {
     private ArrayList<InvalidProperty> setupParamTest(String build_count, String exceed_value) {
         Map<String, String> faultyParameters = Map.ofEntries(
                 new AbstractMap.SimpleEntry(PARAM_BUILD_COUNT, build_count),
-                new AbstractMap.SimpleEntry(PARAM_EXCEED_VALUE, exceed_value)
+                new AbstractMap.SimpleEntry(PARAM_ANCHOR_VALUE, exceed_value)
         );
         return new ArrayList<>(failureCondition.getParametersProcessor().process(faultyParameters));
     }

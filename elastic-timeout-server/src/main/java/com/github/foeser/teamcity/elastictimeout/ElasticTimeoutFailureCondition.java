@@ -1,13 +1,10 @@
 package com.github.foeser.teamcity.elastictimeout;
 
-import jetbrains.buildServer.log.Loggers;
 import jetbrains.buildServer.serverSide.BuildFeature;
 import jetbrains.buildServer.serverSide.InvalidProperty;
 import jetbrains.buildServer.serverSide.PropertiesProcessor;
 import jetbrains.buildServer.util.StringUtil;
 import jetbrains.buildServer.web.openapi.PluginDescriptor;
-import org.apache.log4j.Level;
-import org.apache.log4j.Logger;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -19,13 +16,10 @@ public class ElasticTimeoutFailureCondition extends BuildFeature {
     public static final String PARAM_STATUS = "status_radio";
     public static final String PARAM_STATUS_SUCCESSFUL = "Successful";
     public static final String PARAM_BUILD_COUNT = "build_count";
-    public static final String PARAM_EXCEED_VALUE = "exceed_value";
-    public static final String PARAM_EXCEED_UNIT = "exceed_unit";
-    public static final String PARAM_EXCEED_UNIT_PERCENT = "percent";
+    public static final String PARAM_ANCHOR_VALUE = "anchor_value";
+    public static final String PARAM_ANCHOR_UNIT = "anchor_unit";
+    public static final String PARAM_ANCHOR_UNIT_PERCENT = "percent";
     public static final String PARAM_STOP_BUILD = "stop_build";
-
-    //private static final Logger LOGGER = Logger.getLogger(ElasticTimeoutFailureCondition.class.getName());
-    private static final Logger LOGGER = Logger.getLogger(Loggers.SERVER_CATEGORY);
 
     private final String myEditUrl;
 
@@ -72,7 +66,6 @@ public class ElasticTimeoutFailureCondition extends BuildFeature {
     public String describeParameters(@NotNull Map<String, String> params) {
         // ToDo: align with desc from metric based fail condition to be more consistent ("anchor value")
         StringBuilder sb = new StringBuilder();
-        LOGGER.log(Level.WARN, "param: " + getParameterWithDefaults(params, PARAM_STOP_BUILD));
         if(getParameterWithDefaults(params, PARAM_STOP_BUILD).equals("true")) {
             sb.append("Fail if current build time exceeds the avg. of the last");
         } else {
@@ -87,7 +80,7 @@ public class ElasticTimeoutFailureCondition extends BuildFeature {
             sb.append(" successful");
         }
 
-        sb.append(" builds by ").append(getParameterWithDefaults(params, PARAM_EXCEED_VALUE)).append(" ").append(getParameterWithDefaults(params, PARAM_EXCEED_UNIT));
+        sb.append(" builds by ").append(getParameterWithDefaults(params, PARAM_ANCHOR_VALUE)).append(" ").append(getParameterWithDefaults(params, PARAM_ANCHOR_UNIT));
         return sb.toString();
     }
 
@@ -119,11 +112,11 @@ public class ElasticTimeoutFailureCondition extends BuildFeature {
                 errors.add(new InvalidProperty(PARAM_BUILD_COUNT, "The minimum build count is 2."));
             }
 
-            String exceedValue = params.get(PARAM_EXCEED_VALUE);
-            if (StringUtil.isEmptyOrSpaces(exceedValue)) {
-                errors.add(new InvalidProperty(PARAM_EXCEED_VALUE, "You need to define a threshold value."));
-            } else if (!StringUtil.isAPositiveNumber(exceedValue)) {
-                errors.add(new InvalidProperty(PARAM_EXCEED_VALUE, "Only positive numbers are allowed for the threshold."));
+            String anchorValue = params.get(PARAM_ANCHOR_VALUE);
+            if (StringUtil.isEmptyOrSpaces(anchorValue)) {
+                errors.add(new InvalidProperty(PARAM_ANCHOR_VALUE, "You need to define a anchor value."));
+            } else if (!StringUtil.isAPositiveNumber(anchorValue)) {
+                errors.add(new InvalidProperty(PARAM_ANCHOR_VALUE, "Only positive numbers are allowed for the anchor."));
             }
             return errors;
 
@@ -137,8 +130,8 @@ public class ElasticTimeoutFailureCondition extends BuildFeature {
         final HashMap<String, String> map = new HashMap<>();
         map.put(PARAM_STATUS, "Successful");
         map.put(PARAM_BUILD_COUNT, "3");
-        map.put(PARAM_EXCEED_VALUE, "25");
-        map.put(PARAM_EXCEED_UNIT, "seconds");
+        map.put(PARAM_ANCHOR_VALUE, "25");
+        map.put(PARAM_ANCHOR_UNIT, "seconds");
         map.put(PARAM_STOP_BUILD, "true");
         return map;
     }

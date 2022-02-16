@@ -102,24 +102,29 @@ public class BuildTimeoutHandler {
             List<SFinishedBuild> buildsToConsider = previousBuilds.subList(0, numPreviousBuildsToConsider);
             LOGGER.debug(String.format("Calculating time out times for %s based on those previous builds: %s", build, buildsToConsider));
             // get the total time of all relevant previous builds
-            int exceedValue = Integer.parseInt(timeoutParameters.get(ElasticTimeoutFailureCondition.PARAM_EXCEED_VALUE));
-            boolean usePercentage = timeoutParameters.get(ElasticTimeoutFailureCondition.PARAM_EXCEED_UNIT).equals(ElasticTimeoutFailureCondition.PARAM_EXCEED_UNIT_PERCENT);
-            LOGGER.debug(String.format("Used exceed value: %d (%s)", exceedValue, timeoutParameters.get(ElasticTimeoutFailureCondition.PARAM_EXCEED_UNIT)));
-            long totalTime = buildsToConsider.stream().mapToLong(b -> b.getDuration()).sum();
-            long avgBuildTime = totalTime / numPreviousBuildsToConsider;
-            LOGGER.debug(String.format("Avg. build time of all considered builds: %d", avgBuildTime));
-            // maxRunTime will be build time of previous builds + given percentage or fixed time
-            long maxRunTime = avgBuildTime;
-            if(usePercentage) {
-                maxRunTime += (avgBuildTime * exceedValue) / 100;
-            } else {
-                maxRunTime += exceedValue;
-            }
+            int anchorValue = Integer.parseInt(timeoutParameters.get(ElasticTimeoutFailureCondition.PARAM_ANCHOR_VALUE));
+            boolean usePercentage = timeoutParameters.get(ElasticTimeoutFailureCondition.PARAM_ANCHOR_UNIT).equals(ElasticTimeoutFailureCondition.PARAM_ANCHOR_UNIT_PERCENT);
+            LOGGER.debug(String.format("Used anchor value: %d (%s)", anchorValue, timeoutParameters.get(ElasticTimeoutFailureCondition.PARAM_ANCHOR_UNIT)));
+            long maxRunTime = calculateMaxRunTime(buildsToConsider, anchorValue, usePercentage);
             boolean stopBuildOnTimeout = timeoutParameters.get(ElasticTimeoutFailureCondition.PARAM_STOP_BUILD).equals("true");
             // put() is enough since we can't have the same build id twice per definition (compared to using putIfAbsent())
             mapBuildIdMaxBuildDuration.put(build.getBuildId(), Map.entry(maxRunTime, stopBuildOnTimeout));
             LOGGER.info(String.format("Start checking %s build duration which should not take longer then %d seconds.", build, maxRunTime));
         }
+    }
+
+    private long calculateMaxRunTime(List<SFinishedBuild> buildsToConsider, int anchorValue, boolean isPercentage) {
+        long totalTime = buildsToConsider.stream().mapToLong(b -> b.getDuration()).sum();
+        long avgBuildTime = totalTime / buildsToConsider.size();
+        LOGGER.debug(String.format("Avg. build time of all considered builds: %d", avgBuildTime));
+        // maxRunTime will be avg. build time of previous builds plus a given anchor value either applied as percentage or fixed time
+        long maxRunTime = avgBuildTime;
+        if(isPercentage) {
+            maxRunTime += (avgBuildTime * anchorValue) / 100;
+        } else {
+            maxRunTime += anchorValue;
+        }
+        return maxRunTime;
     }
 
     private void removeBuild(SRunningBuild build) {
